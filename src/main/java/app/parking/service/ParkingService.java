@@ -25,32 +25,27 @@ public class ParkingService {
     }
 
     public Person registerPerson(String name, String phoneNumber, PersonType type, String registrationNumber) {
-
-        // Check if person already exists
+        // Validate person
         if (personRepository.findById(phoneNumber) != null) {
             throw new IllegalArgumentException("Phone number already registered.");
         }
 
-        // Check if vehicle already exists
+        // Validate vehicle
         if (vehicleRepository.findById(registrationNumber) != null) {
             throw new IllegalArgumentException("Vehicle already registered.");
         }
 
-        // Create Person
+        // Create and save person
         Person person = new Person(name, phoneNumber, type);
+        personRepository.savePerson(person);
 
-        // Create Vehicle associated with Person
-        Vehicle vehicle = new Vehicle(registrationNumber, person);
-
-        // Save both objects
-        personRepository.save(phoneNumber, person);
-        vehicleRepository.save(registrationNumber, vehicle);
+        // Create and save vehicle
+        registerVehicle(registrationNumber, person);
 
         return person;
     }
 
-    // Register a vehicle
-    public Vehicle registerVehicle(String registrationNumber, Person person) {
+    public void registerVehicle(String registrationNumber, Person person) {
         if (vehicleRepository.findById(registrationNumber) != null) {
             throw new IllegalArgumentException("Vehicle already registered.");
         }
@@ -58,7 +53,6 @@ public class ParkingService {
         Vehicle vehicle = new Vehicle(registrationNumber, person);
         vehicleRepository.saveVehicle(vehicle);
 
-        return vehicle;
     }
 
     // Display available parking spaces
@@ -77,7 +71,6 @@ public class ParkingService {
 
     // Create reservation
     public Reservation createReservation(String phoneNumber, String registrationNumber, String spaceId, int durationHours) {
-
         if (durationHours <= 0) {
             throw new IllegalArgumentException("Duration must be greater than zero.");
         }
@@ -85,8 +78,7 @@ public class ParkingService {
         Person person = personRepository.findById(phoneNumber);
 
         if (person == null) {
-            throw new IllegalArgumentException(
-                    "Person not registered.");
+            throw new IllegalArgumentException("Person not registered.");
         }
 
         Vehicle vehicle = vehicleRepository.findById(registrationNumber);

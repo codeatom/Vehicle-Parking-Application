@@ -8,6 +8,9 @@ public class InMemoryRepository<T> {
     protected Map<String, T> data = new HashMap<>();
 
     public void save(String id, T object) {
+        if (data.containsKey(id)) {
+            throw new IllegalArgumentException("ID already exists.");
+        }
         data.put(id, object);
     }
 

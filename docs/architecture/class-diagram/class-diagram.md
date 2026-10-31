@@ -56,6 +56,7 @@ class Reservation {
     +getExpectedEndTime() LocalDateTime
     +getActualEndTime() LocalDateTime
     +getStatus() ReservationStatus
+    +completeReservation() void
 }
 
 class PersonType {
@@ -83,6 +84,13 @@ class ParkingService {
     -ParkingSpaceRepository parkingSpaceRepository
     -ReservationRepository reservationRepository
     +ParkingService(PersonRepository, VehicleRepository, ParkingSpaceRepository, ReservationRepository)
+    +registerPerson(String, String, PersonType, String) Person
+    +registerVehicle(String, Person) Vehicle
+    +displayParkingSpaces() void
+    +getAvailableSpaces() List~ParkingSpace~
+    +createReservation(String, String, String, int) Reservation
+    +completeReservation(String) void
+    +displayActiveReservations() void
 }
 
 Person "1" --> "0..*" Vehicle : owns

@@ -60,4 +60,8 @@ public class Reservation {
         return status;
     }
 
+    public void completeReservation() {
+        this.actualEndTime = LocalDateTime.now();
+        this.status = ReservationStatus.COMPLETED;
+    }
 }

@@ -3,103 +3,109 @@ package app.parking.service;
 import app.parking.enums.*;
 import app.parking.models.*;
 import app.parking.repos.*;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ParkingService {
-
     private final PersonRepository personRepository;
     private final VehicleRepository vehicleRepository;
     private final ParkingSpaceRepository parkingSpaceRepository;
     private final ReservationRepository reservationRepository;
+    private final ParkingAreaRepository parkingAreaRepository;
 
     public ParkingService(
             PersonRepository personRepository,
             VehicleRepository vehicleRepository,
             ParkingSpaceRepository parkingSpaceRepository,
-            ReservationRepository reservationRepository) {
+            ReservationRepository reservationRepository,
+            ParkingAreaRepository parkingAreaRepository) {
 
         this.personRepository = personRepository;
         this.vehicleRepository = vehicleRepository;
         this.parkingSpaceRepository = parkingSpaceRepository;
         this.reservationRepository = reservationRepository;
+        this.parkingAreaRepository = parkingAreaRepository;
     }
 
-    public Person registerPerson(String name, String phoneNumber, PersonType type, String registrationNumber) {
-        // Validate person
-        if (personRepository.findById(phoneNumber) != null) {
-            throw new IllegalArgumentException("Phone number already registered.");
+    public ParkingArea initParkingAreaAndSpaces(String areaId, String areaName, int totalSpaces) {
+        List <ParkingSpace> parkingSpaces = new ArrayList<>();
+
+        for (int i = 1; i <= totalSpaces; i++) {
+            String spaceId = "P" + i;
+            ParkingSpace parkingSpace = new ParkingSpace(spaceId);
+            parkingSpaces.add(parkingSpace);
+            parkingSpaceRepository.saveParkingSpace(parkingSpace);
         }
 
-        // Validate vehicle
-        if (vehicleRepository.findById(registrationNumber) != null) {
-            throw new IllegalArgumentException("Vehicle already registered.");
-        }
+        ParkingArea parkingArea = new ParkingArea(areaId, areaName, parkingSpaces);
+        parkingAreaRepository.saveParkingArea(parkingArea);
 
-        // Create and save person
+        return parkingArea;
+    }
+
+    public Person registerPerson(String name, String phoneNumber, PersonType type) {
         Person person = new Person(name, phoneNumber, type);
         personRepository.savePerson(person);
-
-        // Create and save vehicle
-        registerVehicle(registrationNumber, person);
 
         return person;
     }
 
-    public void registerVehicle(String registrationNumber, Person person) {
-        if (vehicleRepository.findById(registrationNumber) != null) {
-            throw new IllegalArgumentException("Vehicle already registered.");
-        }
-
+    public Vehicle registerVehicle(String registrationNumber, Person person) {
         Vehicle vehicle = new Vehicle(registrationNumber, person);
         vehicleRepository.saveVehicle(vehicle);
 
+        return vehicle;
     }
 
     // Display available parking spaces
-    public void displayParkingSpaces() {
-        System.out.println("\n--- PARKING SPACE STATUS ---");
+    public void displayParkingSpaces(String areaId) {
+        System.out.println("PARKING SPACE STATUS");
 
-        for (ParkingSpace space : parkingSpaceRepository.findAll().values()) {
+        ParkingArea parkingArea =  parkingAreaRepository.findById(areaId);
+
+        for (ParkingSpace space : parkingArea.getParkingSpaces()) {
             System.out.println(space.getSpaceId() + " : " + space.getStatus());
         }
     }
 
     // Get available parking spaces
-    public List<ParkingSpace> getAvailableSpaces() {
-        return parkingSpaceRepository.findAvailableSpaces();
+    public List<ParkingSpace> getAvailableSpaces(String id) {
+        return parkingAreaRepository.findAvailableSpaces(id);
     }
 
     // Create reservation
-    public Reservation createReservation(String phoneNumber, String registrationNumber, String spaceId, int durationHours) {
+    public Reservation createReservation(
+            String name,
+            PersonType type,
+            String phoneNumber,
+            String registrationNumber,
+            String areaId,
+            String spaceId,
+            int durationHours) {
+
         if (durationHours <= 0) {
             throw new IllegalArgumentException("Duration must be greater than zero.");
         }
 
-        Person person = personRepository.findById(phoneNumber);
+        Person person = registerPerson(name, phoneNumber, type);
+        Vehicle vehicle = registerVehicle(registrationNumber, person);
 
-        if (person == null) {
-            throw new IllegalArgumentException("Person not registered.");
-        }
+        ParkingSpace parkingSpace = parkingAreaRepository.findById(areaId)
+                .getParkingSpaces()
+                .stream()
+                .filter(space -> space.getSpaceId().equalsIgnoreCase(spaceId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Parking space not found"));
 
-        Vehicle vehicle = vehicleRepository.findById(registrationNumber);
-
-        if (vehicle == null || vehicle.getOwner() != person) {
-            throw new IllegalArgumentException("Vehicle not registered to this person.");
-        }
-
-        ParkingSpace space = parkingSpaceRepository.findById(spaceId.toUpperCase().trim());
-
-        if (space == null) {
-            throw new IllegalArgumentException("Parking space does not exist.");
-        }
-
-        if (space.getStatus() != ParkingSpaceStatus.AVAILABLE) {
+        if (parkingSpace.getStatus() != ParkingSpaceStatus.AVAILABLE) {
             throw new IllegalArgumentException("Parking space is occupied.");
         }
 
-        Reservation reservation = new Reservation(person, vehicle, space, durationHours);
+        Reservation reservation = new Reservation(person, vehicle, parkingSpace, durationHours);
 
-        space.occupy();
+        parkingSpace.occupy();
 
         reservationRepository.saveReservation(reservation);
 

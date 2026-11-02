@@ -9,7 +9,7 @@ public class InMemoryRepository<T> {
 
     public void save(String id, T object) {
         if (data.containsKey(id)) {
-            throw new IllegalArgumentException("ID already exists.");
+            throw new IllegalArgumentException("This ID already exists.");
         }
         data.put(id, object);
     }

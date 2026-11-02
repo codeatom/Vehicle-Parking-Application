@@ -4,11 +4,14 @@ import app.parking.enums.*;
 import app.parking.models.*;
 import app.parking.repos.*;
 import app.parking.service.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 
 public class VehicleParkingApplication {
-     static void main(String[] args) {
+    static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
         // Initialize repositories
@@ -16,19 +19,16 @@ public class VehicleParkingApplication {
         VehicleRepository vehicleRepo = new VehicleRepository();
         ParkingSpaceRepository spaceRepo = new ParkingSpaceRepository();
         ReservationRepository reservationRepo = new ReservationRepository();
+        ParkingAreaRepository parkingAreaRepo = new ParkingAreaRepository();
 
         // Initialize ParkingService
-        ParkingService parkingService = new ParkingService(personRepo, vehicleRepo, spaceRepo, reservationRepo);
+        ParkingService parkingService = new ParkingService(personRepo, vehicleRepo, spaceRepo, reservationRepo, parkingAreaRepo);
 
-        // Create parking spaces
-        int totalSpaces = 20;
-        for (int i = 1; i <= totalSpaces; i++) {
-            String spaceId = "P" + i;
-            spaceRepo.save(spaceId, new ParkingSpace(spaceId)
-            );
-        }
+        // Initialize ParkingArea
+        ParkingArea parkingArea = parkingService.initParkingAreaAndSpaces("Area1", "Area 1",10);
 
         boolean running = true;
+
         while (running) {
             System.out.println("\n========== MAIN MENU ==========");
             System.out.println("1. Register and Reserve Parking");
@@ -42,13 +42,12 @@ public class VehicleParkingApplication {
             int choice;
 
             if (!scanner.hasNextLine()) {
-                running = false;
                 break;
             }
 
             String input = scanner.nextLine();
 
-            if (input.matches("\\d{1,2}")) {
+            if (input.matches("\\d{1}")) {
                 choice = Integer.parseInt(input);
             } else {
                 System.out.println("Error: Please enter a valid menu number.");
@@ -58,96 +57,42 @@ public class VehicleParkingApplication {
             switch (choice) {
                 // REGISTER AND RESERVE PARKING
                 case 1:
-                    System.out.println("\n--- REGISTRATION ---");
+                    System.out.println("\n---- REGISTRATION ----");
 
-                    String name;
-                    while (true) {
-                        System.out.print("Enter your name: ");
-                        name = scanner.nextLine();
-
-                        if (name.trim().isEmpty()) {
-                            System.out.println("Error: Name cannot be empty. Please try again.");
-                        } else {
-                            break;
-                        }
-                    }
-
-                    String phone;
-                    while (true) {
-                        System.out.print("Enter phone number: ");
-                        phone = scanner.nextLine();
-
-                        if (!phone.matches("\\+?[0-9]{1,15}")) {
-                            System.out.println("Error: Invalid phone number. Please try again.");
-                        } else {
-                            break;
-                        }
-                    }
-
-                    String typeInput;
-                    while (true) {
-                        System.out.println("\nWho are you:");
-                        System.out.println("1. Student");
-                        System.out.println("2. Staff");
-                        System.out.println("3. Visitor");
-                        System.out.print("Choose one: ");
-
-                        typeInput = scanner.nextLine();
-
-                        if (!typeInput.matches("[1-3]")) {
-                            System.out.println("Error: Invalid person type. Please choose 1, 2, or 3.");
-                        } else {
-                            break;
-                        }
-                    }
-                    int typeChoice = Integer.parseInt(typeInput);
-
-                    PersonType type = null;
-                    switch (typeChoice) {
-                        case 1 -> type = PersonType.STUDENT;
-                        case 2 -> type = PersonType.STAFF;
-                        case 3 -> type = PersonType.VISITOR;
-                        default -> {
-                            System.out.println("Invalid person type.");
-                        }
-                    }
-
-                    String registration;
-                    while (true) {
-                        System.out.print("Enter vehicle registration number: ");
-                        registration = scanner.nextLine();
-
-                        if (registration.trim().isEmpty()) {
-                            System.out.println("Error: Registration number cannot be empty. Please try again.");
-                        } else {
-                            break;
-                        }
-                    }
-
-                    Person person = parkingService.registerPerson(name, phone, type, registration);
-
-                    System.out.println("\nRegistration successful!");
-                    System.out.println("Welcome, " + person.getName());
-
-                    parkingService.displayParkingSpaces();
-
-                    System.out.println("\nAvailable spaces: " + parkingService.getAvailableSpaces().size());
+                    parkingService.displayParkingSpaces(parkingArea.getAreaId());
+                    System.out.println("\nAvailable spaces: " + parkingService.getAvailableSpaces(parkingArea.getAreaId()).size());
 
                     String spaceId;
-                    while (true) {
-                        System.out.print("\nEnter parking space ID: ");
-                        spaceId = scanner.nextLine();
+                    List<ParkingSpace> spaces = parkingArea.getParkingSpaces();
 
-                        if (spaceId.trim().isEmpty()) {
+                    while (true) {
+                        System.out.print("Choose a parking space ID: ");
+                        spaceId = scanner.nextLine().trim();
+
+                        if (spaceId.isEmpty()) {
                             System.out.println("Error: Parking space ID cannot be empty. Please try again.");
-                        } else {
+                            continue;
+                        }
+
+                        boolean found = false;
+
+                        for (ParkingSpace p : spaces) {
+                            if (spaceId.equalsIgnoreCase(p.getSpaceId()) && p.getStatus().equals(ParkingSpaceStatus.AVAILABLE) ) {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (found) {
                             break;
+                        } else {
+                            System.out.println("Error: Wrong choice. Please try again. Choose a space that is available.\n");
                         }
                     }
 
                     int duration;
                     while (true) {
-                        System.out.print("How many hours do you plan to park? ");
+                        System.out.print("\nHow many hours do you plan to park? ");
                         String durationInput = scanner.nextLine();
 
                         if (!durationInput.matches("[0-9]+")) {
@@ -163,7 +108,107 @@ public class VehicleParkingApplication {
                         }
                     }
 
-                    Reservation reservation = parkingService.createReservation(phone, registration, spaceId, duration);
+                    String name;
+                    while (true) {
+                        System.out.print("\nEnter your name: ");
+                        name = scanner.nextLine();
+
+                        if (name.trim().isEmpty()) {
+                            System.out.println("Error: Name cannot be empty. Please try again.");
+                        } else {
+                            break;
+                        }
+                    }
+
+                    String phoneNumber;
+                    List<String> existingPhoneNumbers = new ArrayList<>(personRepo.findAll().keySet());
+
+                    while (true) {
+                        System.out.print("Enter phone number: ");
+                        phoneNumber = scanner.nextLine();
+
+                        if (phoneNumber.isEmpty()) {
+                            System.out.println("Error: phoneNumber cannot be empty. Please try again.");
+                            continue;
+                        }
+
+                        boolean found = false;
+
+                        for (String p : existingPhoneNumbers) {
+                            if (p.equals(phoneNumber)) {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (found) {
+                            System.out.println("Error: Phone number already exist. Please try again.\n");
+                        } else {
+                            break;
+                        }
+                    }
+
+                    PersonType type = null;
+                    String typeInput;
+                    while (true) {
+                        System.out.println("\nAre you a:");
+                        System.out.println("1. Student");
+                        System.out.println("2. Staff");
+                        System.out.println("3. Visitor");
+                        System.out.print("Choose one: ");
+
+                        typeInput = scanner.nextLine();
+
+                        if (!typeInput.matches("[1-3]")) {
+                            System.out.println("Error: Invalid person type. Please choose 1, 2, or 3.");
+                            continue;
+                        }
+
+                        int typeChoice = Integer.parseInt(typeInput);
+                        switch (typeChoice) {
+                            case 1 -> type = PersonType.STUDENT;
+                            case 2 -> type = PersonType.STAFF;
+                            case 3 -> type = PersonType.VISITOR;
+                            default -> {
+                                System.out.println("Invalid person type.");
+                            }
+                        }
+
+                        break;
+                    }
+
+                    String registration;
+                    List<String> existionRegistrationlist = new ArrayList<>(vehicleRepo.findAll().keySet());
+
+                    while (true) {
+                        System.out.print("\nEnter vehicle registration number: ");
+                        registration = scanner.nextLine();
+
+                        if (registration.isEmpty()) {
+                            System.out.println("Error: Registration number cannot be empty. Please try again.");
+                            continue;
+                        }
+
+                        boolean found = false;
+
+                        for (String r : existionRegistrationlist) {
+                            if (r.equals(registration)) {
+                                    found = true;
+                                    break;
+                            }
+                        }
+
+                        if (found) {
+                            System.out.println("Error: Registration number already exist. Please try again.");
+                        } else {
+                            break;
+                        }
+                    }
+
+                    //Create registration
+                    Reservation reservation = parkingService.createReservation(name, type, phoneNumber,
+                            registration, parkingArea.getAreaId(), spaceId, duration
+                    );
 
                     System.out.println("\n===== RESERVATION CONFIRMED =====");
                     System.out.println("Reservation ID: " + reservation.getReservationId());
@@ -176,11 +221,10 @@ public class VehicleParkingApplication {
                     System.out.println("=================================");
                     break;
 
-
                 // DISPLAY PARKING SPACES
                 case 2:
-                    parkingService.displayParkingSpaces();
-                    System.out.println("\nAvailable spaces: " + parkingService.getAvailableSpaces().size());
+                    parkingService.displayParkingSpaces("Area1");
+                    System.out.println("\nAvailable spaces: " + parkingService.getAvailableSpaces("Area1").size());
                     break;
 
                 // COMPLETE RESERVATION
@@ -199,7 +243,11 @@ public class VehicleParkingApplication {
                         }
                     }
 
-                    parkingService.completeReservation(reservationId);
+                    try {
+                        parkingService.completeReservation(reservationId);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
                     break;
 
                 // DISPLAY ACTIVE RESERVATIONS

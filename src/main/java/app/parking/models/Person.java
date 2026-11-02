@@ -3,7 +3,6 @@ package app.parking.models;
 import app.parking.enums.PersonType;
 
 public class Person {
-
     private final String name;
     private final String phoneNumber;
     private final PersonType personType;

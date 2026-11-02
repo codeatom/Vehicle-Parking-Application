@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class Reservation {
-
     private final String reservationId;
     private final Person person;
     private final Vehicle vehicle;

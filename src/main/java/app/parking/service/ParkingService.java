@@ -76,9 +76,14 @@ public class ParkingService {
     }
 
     // Create reservation
-    public Reservation createReservation(String name, PersonType type, String phoneNumber,
-                                         String registrationNumber, String areaId,
-                                         String spaceId, int durationHours) {
+    public Reservation createReservation(
+            String name,
+            PersonType type,
+            String phoneNumber,
+            String registrationNumber,
+            String areaId,
+            String spaceId,
+            int durationHours) {
 
         if (durationHours <= 0 || durationHours > 24) {
             throw new IllegalArgumentException(
@@ -108,23 +113,23 @@ public class ParkingService {
             throw new IllegalArgumentException("Parking space is occupied.");
         }
 
-        // Check duplicate person
-        if (personRepository.findById(phoneNumber) != null) {
-            throw new IllegalArgumentException("Phone number already exists.");
+        // Find existing person
+        Person person = personRepository.findById(phoneNumber);
+
+        // Register new person if not found
+        if (person == null) {
+            person = registerPerson(name, phoneNumber, type);
         }
 
-        // Check duplicate vehicle ID
-        if (vehicleRepository.findById(registrationNumber) != null) {
-            throw new IllegalArgumentException(
-                    "Vehicle registration already exists."
-            );
+        // Find existing vehicle
+        Vehicle vehicle = vehicleRepository.findById(registrationNumber);
+
+        // Register new vehicle if not found
+        if (vehicle == null) {
+            vehicle = registerVehicle(registrationNumber, person);
+        } else if (!vehicle.getOwner().getPhoneNumber().equals(phoneNumber)) {
+            throw new IllegalArgumentException("This vehicle belongs to another registered person.");
         }
-
-        // Register person
-        Person person = registerPerson(name, phoneNumber, type);
-
-        // Register vehicle
-        Vehicle vehicle = registerVehicle(registrationNumber, person);
 
         // Create reservation
         Reservation reservation = new Reservation(person, vehicle, parkingSpace, durationHours);

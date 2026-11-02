@@ -7,7 +7,6 @@ import app.parking.service.*;
 import app.parking.storage.FileStorageService;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -157,77 +156,80 @@ public class VehicleParkingApplication {
                         }
                     }
 
-                    String name;
-                    while (true) {
-                        System.out.print("\nEnter your name: ");
-                        name = scanner.nextLine();
-
-                        if (name.trim().isEmpty()) {
-                            System.out.println("Error: Name cannot be empty. Please try again.");
-                        } else {
-                            break;
-                        }
-                    }
-
                     String phoneNumber;
-                    List<String> existingPhoneNumbers = new ArrayList<>(personRepo.findAll().keySet());
+                    Person existingPerson;
 
                     while (true) {
                         System.out.print("Enter phone number: ");
-                        phoneNumber = scanner.nextLine();
+                        phoneNumber = scanner.nextLine().trim();
 
                         if (phoneNumber.isEmpty()) {
-                            System.out.println("Error: phoneNumber cannot be empty. Please try again.");
+                            System.out.println("Error: Phone number cannot be empty.");
                             continue;
                         }
 
-                        boolean found = false;
-
-                        for (String p : existingPhoneNumbers) {
-                            if (p.equals(phoneNumber)) {
-                                found = true;
-                                break;
-                            }
+                        if (!phoneNumber.matches("\\+?[0-9]{1,15}")) {
+                            System.out.println("Error: Invalid phone number.");
+                            continue;
                         }
 
-                        if (found) {
-                            System.out.println("Error: Phone number already exist. Please try again.\n");
+                        existingPerson = personRepo.findById(phoneNumber);
+
+                        if (existingPerson != null) {
+                            System.out.println("Welcome back, " + existingPerson.getName());
                         } else {
-                            break;
-                        }
-                    }
-
-                    PersonType type = null;
-                    String typeInput;
-                    while (true) {
-                        System.out.println("\nAre you a:");
-                        System.out.println("1. Student");
-                        System.out.println("2. Staff");
-                        System.out.println("3. Visitor");
-                        System.out.print("Choose one: ");
-
-                        typeInput = scanner.nextLine();
-
-                        if (!typeInput.matches("[1-3]")) {
-                            System.out.println("Error: Invalid person type. Please choose 1, 2, or 3.");
-                            continue;
-                        }
-
-                        int typeChoice = Integer.parseInt(typeInput);
-                        switch (typeChoice) {
-                            case 1 -> type = PersonType.STUDENT;
-                            case 2 -> type = PersonType.STAFF;
-                            case 3 -> type = PersonType.VISITOR;
-                            default -> {
-                                System.out.println("Invalid person type.");
-                            }
+                            System.out.println("New customer. Welcome!");
                         }
 
                         break;
                     }
 
-                    String registration;
-                    List<String> existionRegistrationlist = new ArrayList<>(vehicleRepo.findAll().keySet());
+                    String name;
+                    PersonType type;
+
+                    if (existingPerson != null) {
+                        name = existingPerson.getName();
+                        type = existingPerson.getPersonType();
+                    } else {
+                        // Ask for name
+                        while (true) {
+                            System.out.print("\nEnter your name: ");
+                            name = scanner.nextLine().trim();
+
+                            if (name.isEmpty()) {
+                                System.out.println("Error: Name cannot be empty.");
+                            } else {
+                                break;
+                            }
+                        }
+
+                        // Ask for person type
+                        while (true) {
+                            System.out.println("\nAre you a:");
+                            System.out.println("1. Student");
+                            System.out.println("2. Staff");
+                            System.out.println("3. Visitor");
+                            System.out.print("Choose one: ");
+
+                            String typeInput = scanner.nextLine();
+
+                            if (!typeInput.matches("[1-3]")) {
+                                System.out.println("Error: Choose 1, 2, or 3.");
+                                continue;
+                            }
+
+                            switch (typeInput) {
+                                case "1" -> type = PersonType.STUDENT;
+                                case "2" -> type = PersonType.STAFF;
+                                case "3" -> type = PersonType.VISITOR;
+                                default -> throw new IllegalStateException();
+                            }
+
+                            break;
+                        }
+                    }
+
+                    /*String registration;
 
                     while (true) {
                         System.out.print("\nEnter vehicle registration number: ");
@@ -238,20 +240,40 @@ public class VehicleParkingApplication {
                             continue;
                         }
 
-                        boolean found = false;
-
-                        for (String r : existionRegistrationlist) {
-                            if (r.equals(registration)) {
-                                    found = true;
-                                    break;
-                            }
-                        }
-
-                        if (found) {
-                            System.out.println("Error: Registration number already exist. Please try again.");
-                        } else {
+                        if (!registration.matches("[a-zA-Z0-9]+")) {
+                            System.out.println("Error: Invalid car registration. Please try again");
+                        }else {
                             break;
                         }
+                    }*/
+
+                    String registration;
+                    Vehicle existingVehicle;
+
+                    while (true) {
+                        System.out.print("\nEnter vehicle registration number: ");
+                        registration = scanner.nextLine().trim().toUpperCase();
+
+                        if (registration.isEmpty()) {
+                            System.out.println("Error: Registration cannot be empty.");
+                            continue;
+                        }
+
+                        if (!registration.matches("[a-zA-Z0-9]+")) {
+                            System.out.println("Error: Invalid registration.");
+                            continue;
+                        }
+
+                        existingVehicle = vehicleRepo.findById(registration);
+
+                        if (existingVehicle != null &&
+                                !existingVehicle.getOwner().getPhoneNumber().equals(phoneNumber)) {
+
+                            System.out.println("Error: This vehicle belongs to another customer.");
+                            continue;
+                        }
+
+                        break;
                     }
 
                     //Create registration

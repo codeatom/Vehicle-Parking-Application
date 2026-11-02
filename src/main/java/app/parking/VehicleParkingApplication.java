@@ -4,14 +4,16 @@ import app.parking.enums.*;
 import app.parking.models.*;
 import app.parking.repos.*;
 import app.parking.service.*;
+import app.parking.storage.FileStorageService;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 
 public class VehicleParkingApplication {
-    static void main(String[] args) {
+    public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
         // Initialize repositories
@@ -22,10 +24,57 @@ public class VehicleParkingApplication {
         ParkingAreaRepository parkingAreaRepo = new ParkingAreaRepository();
 
         // Initialize ParkingService
-        ParkingService parkingService = new ParkingService(personRepo, vehicleRepo, spaceRepo, reservationRepo, parkingAreaRepo);
+        ParkingService parkingService = new ParkingService(
+                personRepo,
+                vehicleRepo,
+                spaceRepo,
+                reservationRepo,
+                parkingAreaRepo
+        );
 
-        // Initialize ParkingArea
-        ParkingArea parkingArea = parkingService.initParkingAreaAndSpaces("Area1", "Area 1",10);
+        // Initialize FileStorageService
+        FileStorageService storageService = new FileStorageService(
+                personRepo,
+                vehicleRepo,
+                spaceRepo,
+                reservationRepo,
+                parkingAreaRepo
+        );
+
+        // Load saved information
+        try {
+            storageService.initialize();
+            System.out.println("Data loaded successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error loading data: " + e.getMessage());
+            scanner.close();
+            return;
+        }
+
+        // Find existing parking area
+        ParkingArea parkingArea = parkingAreaRepo.findById("Area1");
+
+        // Create area only if it does not exist
+        if (parkingArea == null) {
+
+            parkingArea = parkingService.initParkingAreaAndSpaces(
+                    "Area1",
+                    "Area 1",
+                    10
+            );
+
+            try {
+                storageService.saveAll();
+                System.out.println("New parking area created and saved.");
+
+            } catch (IOException e) {
+                System.out.println("Error saving parking area: " + e.getMessage());
+            }
+
+        } else {
+            System.out.println("Existing parking area loaded.");
+        }
 
         boolean running = true;
 
@@ -210,6 +259,13 @@ public class VehicleParkingApplication {
                             registration, parkingArea.getAreaId(), spaceId, duration
                     );
 
+                    try {
+                        storageService.saveAll();
+                        System.out.println("Reservation data saved successfully.");
+                    } catch (IOException e) {
+                        System.out.println("Error saving data: " + e.getMessage());
+                    }
+
                     System.out.println("\n===== RESERVATION CONFIRMED =====");
                     System.out.println("Reservation ID: " + reservation.getReservationId());
                     System.out.println("Name: " + reservation.getPerson().getName());
@@ -245,8 +301,16 @@ public class VehicleParkingApplication {
 
                     try {
                         parkingService.completeReservation(reservationId);
+
+                        storageService.saveAll();
+
+                        System.out.println("Changes saved successfully.");
+
                     } catch (IllegalArgumentException e) {
                         System.out.println("Error: " + e.getMessage());
+
+                    } catch (IOException e) {
+                        System.out.println("Error saving data: " + e.getMessage());
                     }
                     break;
 
@@ -257,6 +321,13 @@ public class VehicleParkingApplication {
 
                 // EXIT APPLICATION
                 case 5:
+                    try {
+                        storageService.saveAll();
+                        System.out.println("All data saved successfully.");
+                    } catch (IOException e) {
+                        System.out.println("Error saving data: " + e.getMessage());
+                    }
+
                     running = false;
                     System.out.println("\nThank you for using our Parking System!");
                     break;

@@ -27,6 +27,27 @@ public class Reservation {
         this.status = ReservationStatus.ACTIVE;
     }
 
+    public Reservation(
+            String reservationId,
+            Person person,
+            Vehicle vehicle,
+            ParkingSpace parkingSpace,
+            LocalDateTime startTime,
+            LocalDateTime expectedEndTime,
+            LocalDateTime actualEndTime,
+            ReservationStatus status) {
+
+        this.reservationId = reservationId;
+        this.person = person;
+        this.vehicle = vehicle;
+        this.parkingSpace = parkingSpace;
+        this.startTime = startTime;
+        this.expectedEndTime = expectedEndTime;
+        this.actualEndTime = actualEndTime;
+        this.status = status;
+    }
+
+
     public String getReservationId() {
         return reservationId;
     }

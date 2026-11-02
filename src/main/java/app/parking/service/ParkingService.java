@@ -76,37 +76,63 @@ public class ParkingService {
     }
 
     // Create reservation
-    public Reservation createReservation(
-            String name,
-            PersonType type,
-            String phoneNumber,
-            String registrationNumber,
-            String areaId,
-            String spaceId,
-            int durationHours) {
+    public Reservation createReservation(String name, PersonType type, String phoneNumber,
+                                         String registrationNumber, String areaId,
+                                         String spaceId, int durationHours) {
 
-        if (durationHours <= 0) {
-            throw new IllegalArgumentException("Duration must be greater than zero.");
+        if (durationHours <= 0 || durationHours > 24) {
+            throw new IllegalArgumentException(
+                    "Duration must be between 1 and 24 hours."
+            );
         }
 
-        Person person = registerPerson(name, phoneNumber, type);
-        Vehicle vehicle = registerVehicle(registrationNumber, person);
+        // Find parking area
+        ParkingArea area = parkingAreaRepository.findById(areaId);
 
-        ParkingSpace parkingSpace = parkingAreaRepository.findById(areaId)
-                .getParkingSpaces()
+        if (area == null) {
+            throw new IllegalArgumentException("Parking area not found.");
+        }
+
+        // Find parking space
+        ParkingSpace parkingSpace = area.getParkingSpaces()
                 .stream()
-                .filter(space -> space.getSpaceId().equalsIgnoreCase(spaceId))
+                .filter(space ->
+                        space.getSpaceId().equalsIgnoreCase(spaceId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Parking space not found"));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Parking space not found.")
+                );
 
+        // Check availability of parking space
         if (parkingSpace.getStatus() != ParkingSpaceStatus.AVAILABLE) {
             throw new IllegalArgumentException("Parking space is occupied.");
         }
 
+        // Check duplicate person
+        if (personRepository.findById(phoneNumber) != null) {
+            throw new IllegalArgumentException("Phone number already exists.");
+        }
+
+        // Check duplicate vehicle ID
+        if (vehicleRepository.findById(registrationNumber) != null) {
+            throw new IllegalArgumentException(
+                    "Vehicle registration already exists."
+            );
+        }
+
+        // Register person
+        Person person = registerPerson(name, phoneNumber, type);
+
+        // Register vehicle
+        Vehicle vehicle = registerVehicle(registrationNumber, person);
+
+        // Create reservation
         Reservation reservation = new Reservation(person, vehicle, parkingSpace, durationHours);
 
+        // Occupy space
         parkingSpace.occupy();
 
+        // Save reservation
         reservationRepository.saveReservation(reservation);
 
         return reservation;

@@ -19,10 +19,6 @@ public class ParkingSpace {
         return status;
     }
 
-    /*public void setStatus(ParkingSpaceStatus status) {
-        this.status = status;
-    }*/
-
     public void occupy() {
         if (status == ParkingSpaceStatus.OCCUPIED) {
             throw new IllegalStateException(

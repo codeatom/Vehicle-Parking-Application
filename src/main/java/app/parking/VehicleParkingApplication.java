@@ -229,24 +229,6 @@ public class VehicleParkingApplication {
                         }
                     }
 
-                    /*String registration;
-
-                    while (true) {
-                        System.out.print("\nEnter vehicle registration number: ");
-                        registration = scanner.nextLine();
-
-                        if (registration.isEmpty()) {
-                            System.out.println("Error: Registration number cannot be empty. Please try again.");
-                            continue;
-                        }
-
-                        if (!registration.matches("[a-zA-Z0-9]+")) {
-                            System.out.println("Error: Invalid car registration. Please try again");
-                        }else {
-                            break;
-                        }
-                    }*/
-
                     String registration;
                     Vehicle existingVehicle;
 
